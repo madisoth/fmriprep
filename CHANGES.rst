@@ -2,6 +2,23 @@
 ============
 A new major version of fMRIPrep is finally here!
 
+  21.0.0rc2
+  ---------
+  * DOC: ME | Add missing output to documentation, improve boilerplate (#2608)
+  * ENH: Tedana-friendly ME derivatives (#2575)
+  * ENH: Better integration of *SDCFlows*' unwarping (#2576)
+  * ENH: Refactor workflow to adopt *SDCFlows*' new correction workflow (#2547)
+  * FIX: Restore SyN-SDC (#2530)
+  * FIX: Confusing I/O field ``bold_mask`` in bold-to-bold resampling workflow (#2611)
+  * FIX: ME | Revise SDC compute graph (#2610)
+  * FIX: Propagate the SDC warp to resampling node also with ME (#2609)
+  * FIX: Optimize build job on CircleCI (#2605)
+  * FIX: Minor multiecho issues (#2574)
+  * MAINT: Finalize the work we started with the refactor of the Docker image (#2601)
+  * MAINT: Run full workflows on tags (#2593)
+  * MAINT: Stage Python environment of Docker image from nipreps/miniconda (#2581)
+  * MAINT: Stop NeuroDebian dependency in Dockerfile (#2578)
+
   21.0.0rc1
   ---------
   * DOC: Add --index-metadata to `pybids layout` faq (#2546)
