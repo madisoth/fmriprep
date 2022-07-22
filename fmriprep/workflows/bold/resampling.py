@@ -406,7 +406,7 @@ preprocessed BOLD runs*: {tpl}.
         name="mask_merge_tfms",
         run_without_submitting=True,
         mem_gb=DEFAULT_MEMORY_MIN_GB,
-    )
+    )    
 
     merge_xforms = pe.Node(
         niu.Merge(4),
@@ -514,14 +514,25 @@ preprocessed BOLD runs*: {tpl}.
         # fmt:on
 
     if multiecho:
+        t2star_merge_xforms = pe.Node(
+            niu.Merge(2),
+            name="merge_xforms",
+            run_without_submitting=True,
+            mem_gb=DEFAULT_MEMORY_MIN_GB,
+        )
+
         t2star_std_tfm = pe.Node(
-            ApplyTransforms(interpolation="LanczosWindowedSinc", float=True),
+            MultiApplyTransforms(
+                interpolation="LanczosWindowedSinc", float=True
+            ),
             name="t2star_std_tfm", mem_gb=1
         )
         # fmt:off
         workflow.connect([
+            (inputnode, t2star_merge_xforms, [(("itk_bold_to_t1", _aslist), "in2")]),
+            (select_std, t2star_merge_xforms, [("anat2std_xfm", "in1")]),
             (inputnode, t2star_std_tfm, [("t2star", "input_image")]),
-            (select_std, t2star_std_tfm, [("anat2std_xfm", "transforms")]),
+            (t2star_merge_xforms, t2star_std_tfm, [("out", "transforms")]),
             (gen_ref, t2star_std_tfm, [("out_file", "reference_image")]),
             (t2star_std_tfm, poutputnode, [("output_image", "t2star_std")]),
         ])
