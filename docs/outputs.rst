@@ -36,17 +36,43 @@ upcoming `BEP 011`_ and `BEP 012`_).
          - ICA-AROMA's *non-aggressive* denoised outputs, and
          - CompCor regressors, which are calculated after temporal high-pass filtering.
 
+Layout
+------
+Assuming fMRIPrep is invoked with::
+
+    fmriprep <input_dir>/ <output_dir>/ participant [OPTIONS]
+
+The outputs will be a `BIDS Derivatives`_ dataset of the form::
+
+    <output_dir>/
+      logs/
+      sub-<label>/
+      sub-<label>.html
+      dataset_description.json
+      .bidsignore
+
+For each participant in the dataset,
+a directory of derivatives (``sub-<label>/``)
+and a visual report (``sub-<label>.html``) are generated.
+The log directory contains `citation boilerplate`_ text.
+``dataset_description.json`` is a metadata file in which fMRIPrep
+records metadata recommended by the BIDS standard.
+
+This layout, now the default, may be explicitly specified with the
+``--output-layout bids`` command-line option.
+For compatibility with versions of fMRIPrep prior to 21.0, the
+`legacy layout`_ is available via ``-output-layout legacy``.
+
 Visual Reports
 --------------
 *fMRIPrep* outputs summary reports, written to ``<output dir>/fmriprep/sub-<subject_label>.html``.
 These reports provide a quick way to make visual inspection of the results easy.
-Each report is self contained and thus can be easily shared with collaborators (for example via email).
 `View a sample report. <_static/SampleReport/sample_report.html>`_
 
 Derivatives of *fMRIPrep* (preprocessed data)
 ---------------------------------------------
 Preprocessed, or derivative, data are written to
-``<output dir>/fmriprep/sub-<subject_label>/``.
+``<output dir>/sub-<subject_label>/``.
 The `BIDS Derivatives`_ specification describes the naming and metadata conventions we follow.
 
 Anatomical derivatives
@@ -94,26 +120,36 @@ conformed space for surface reconstruction (``fsnative``) is stored in::
 
 FreeSurfer derivatives
 ~~~~~~~~~~~~~~~~~~~~~~
-A FreeSurfer subjects directory is created in ``<output dir>/freesurfer``, or the
-directory indicated with the ``--fs-subjects-dir`` flag. ::
+If FreeSurfer is run, then a FreeSurfer subjects directory is created in
+``<output dir>/sourcedata/freesurfer`` or the directory indicated with the
+``--fs-subjects-dir`` flag.
+Additionally, FreeSurfer segmentations are resampled into the BOLD space,
+and lookup tables are provided. ::
 
     <output_dir>/
-        fmriprep/
-            ...
+      sourcedata/
         freesurfer/
-            fsaverage{,5,6}/
-                mri/
-                surf/
-                ...
-            sub-<subject_label>/
-                mri/
-                surf/
-                ...
-            ...
+          fsaverage{,5,6}/
+              mri/
+              surf/
+              ...
+          sub-<label>/
+              mri/
+              surf/
+              ...
+          ...
+      desc-aparc_dseg.tsv
+      desc-aparcaseg_dseg.tsv
 
 Copies of the ``fsaverage`` subjects distributed with the running version of
 FreeSurfer are copied into this subjects directory, if any functional data are
 sampled to those subject spaces.
+
+Note that the use of ``sourcedata/`` recognizes FreeSurfer derivatives as an input to
+the fMRIPrep workflow.
+This is strictly true when pre-computed FreeSurfer derivatives are provided either in
+the ``sourcedata/`` directory or passed via the ``--fs-subjects-dir`` flag;
+if fMRIPrep runs FreeSurfer, then there is a mutual dependency.
 
 Functional derivatives
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -198,6 +234,38 @@ are saved::
     func/
       sub-<subject_label>_[specifiers]_AROMAnoiseICs.csv
       sub-<subject_label>_[specifiers]_desc-MELODIC_mixing.tsv
+
+**Multi-echo derivatives**.
+For multi-echo datasets, the output ``_bold`` series are "optimally combined" by
+`tedana`_ to better estimate the BOLD signal.
+This process also generates a T2\* map, which is resampled into every requested output
+space.
+
+::
+
+  sub-<subject_label>/
+    func/
+      sub-<subject_label>_[specifiers]_T2starmap.nii.gz
+
+If the ``--me-output-echos`` flag is specified, then the distortion-corrected (STC, HMC, SDC)
+per-echo time series are output. For example, if the inputs are of the form::
+
+  sub-01/
+    func/
+      sub-01_task-rest_echo-1_bold.nii.gz
+      sub-01_task-rest_echo-2_bold.nii.gz
+      sub-01_task-rest_echo-3_bold.nii.gz
+
+Then the output will include::
+
+  sub-01/
+    func/
+      sub-01_task-rest_echo-1_desc-preproc_bold.nii.gz
+      sub-01_task-rest_echo-2_desc-preproc_bold.nii.gz
+      sub-01_task-rest_echo-3_desc-preproc_bold.nii.gz
+
+These may then be used independently with multi-echo tools, such as `tedana`_,
+to perform more advanced denoising or alternative combination strategies.
 
 .. danger::
    Slice timing correction in *fMRIPrep* is referenced to the middle slice by default,
@@ -445,6 +513,13 @@ For CompCor decompositions, entries include:
     where Patrick Sadil gets into details about PCA and how that base technique applies
     to CompCor in general and *fMRIPrep*'s implementation in particular.
 
+**Confounds estimated from the brain's outer edge**.
+Reusing the implementation of aCompCor, *fMRIPrep* generates regressors corresponding to the
+24 first principal components extracted with PCA using the voxel time-series delineated by
+the brain's outer edge (*crown*) mask.
+The procedure essentially follows the initial proposal of the approach by Patriat et al.
+[Patriat2017]_ and is described in our ISMRM abstract [Provins2022]_.
+
 **AROMA confounds**.
 :abbr:`AROMA (Automatic Removal Of Motion Artifacts)` is an :abbr:`ICA (independent components analysis)`
 based procedure to identify confounding time series related to head-motion [Prium2015]_.
@@ -527,6 +602,29 @@ to which tissue-specific regressors correlate with global signal.
 
 See implementation on :mod:`~fmriprep.workflows.bold.confounds.init_bold_confs_wf`.
 
+Legacy layout
+-------------
+
+Prior to fMRIPrep 21.0, the following organizational structure was used::
+
+    <output_dir>/
+      fmriprep/
+      freesurfer/
+
+Although this has the advantage of keeping all outputs together,
+it ensured that the output of fMRIPrep could not itself be a BIDS derivative dataset,
+only contain one.
+
+To restore this behavior, use the ``--output-layout legacy`` command-line option.
+
+The BIDS and legacy layouts are otherwise the same in all respects.
+It is thus possible to achieve identical results with the BIDS layout by using
+the following invocation::
+
+    fmriprep <input_dir>/ <output_dir>/fmriprep/ participant \
+        --fs-subjects-dir <output_dir>/freesurfer/ [OPTIONS]
+
+
 .. topic:: References
 
   .. [Behzadi2007] Behzadi Y, Restom K, Liau J, Liu TT, A component-based noise correction method
@@ -573,6 +671,10 @@ See implementation on :mod:`~fmriprep.workflows.bold.confounds.init_bold_confs_w
      and sensitivity of motion correction strategies for resting-state functional MRI. NeuroImage. 2018.
      doi:`10.1016/j.neuroimage.2017.12.073 <https://doi.org/10.1016/j.neuroimage.2017.12.073>`_
 
+  .. [Patriat2017] Patriat R, Reynolds RC, Birn RM, An improved model of motion-related signal
+     changes in fMRI. NeuroImage. 2017.
+     doi:`10.1016/j.neuroimage.2016.08.051 <https://doi.org/10.1016/j.neuroimage.2016.08.051>`_.
+
   .. [Power2012] Power JD, Barnes KA, Snyder AZ, Schlaggar BL, Petersen, SA, Spurious but systematic
      correlations in functional connectivity MRI networks arise from subject motion. NeuroImage. 2012.
      doi:`10.1016/j.neuroimage.2011.10.018 <https://doi.org/10.1016/j.neuroimage.2011.10.018>`_
@@ -584,6 +686,10 @@ See implementation on :mod:`~fmriprep.workflows.bold.confounds.init_bold_confs_w
      ICA-AROMA: A robust ICA-based strategy for removing motion artifacts from fMRI data.
      Neuroimage. 2015 May 15;112:267–77.
      doi:`10.1016/j.neuroimage.2015.02.064 <https://doi.org/10.1016/j.neuroimage.2015.02.064>`_.
+
+  .. [Provins2022] Provins C et al., Quality control and nuisance regression of fMRI, looking out
+     where signal should not be found. Proc. Intl. Soc. Mag. Reson. Med. 31, London (UK). 2022
+     doi:`10.31219/osf.io/hz52v <https://doi.org/10.31219/osf.io/hz52v>`_.
 
   .. [Satterthwaite2013] Satterthwaite TD, Elliott MA, Gerraty RT, Ruparel K, Loughead J, Calkins ME,
      Eickhoff SB, Hakonarson H, Gur RC, Gur RE, Wolf DH,
