@@ -1,11 +1,15 @@
-22.0.0 (To be determined)
-=========================
+22.0.0 (July 28, 2022)
+======================
 New feature release in the 22.0.x series.
 
 This release has been tested to work with Python 3.9 and FreeSurfer 7.2,
 which are now bundled in the Docker image.
 
 This release also features improvements to T2\* and carpetplot reporting.
+
+For the next release, we are investigating issues with susceptibility
+distortion correction (SDC). Please check your results carefully and report
+any issues you find.
 
   * FIX: Update wrapper python path (#2783)
   * FIX: Preserve ``collect_data`` behavior by using named args (#2754)
