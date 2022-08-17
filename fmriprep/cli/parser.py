@@ -333,6 +333,23 @@ https://fmriprep.readthedocs.io/en/%s/spaces.html"""
         help="Do not use boundary-based registration (no goodness-of-fit checks)",
     )
     g_conf.add_argument(
+        "--medial-surface-nan",
+        required=False,
+        action="store_true",
+        default=False,
+        help="Replace medial wall values with NaNs on functional GIFTI files. Only "
+        "performed for GIFTI files mapped to a freesurfer subject (fsaverage or fsnative).",
+    )
+    g_conf.add_argument(
+        "--project-goodvoxels",
+        required=False,
+        action="store_true",
+        default=False,
+        help="Exclude voxels whose timeseries have locally high coefficient of variation "
+        "from surface resampling. Only performed for GIFTI files mapped to a freesurfer subject "
+        "(fsaverage or fsnative).",
+    )
+    g_conf.add_argument(
         "--slice-time-ref",
         required=False,
         action="store",
