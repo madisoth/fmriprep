@@ -162,6 +162,7 @@ surface projection.
         name="sampler",
         mem_gb=mem_gb * 3,
     )
+
     sampler.inputs.hemi = ["lh", "rh"]
 
     # Refine if medial vertices should be NaNs
@@ -188,7 +189,7 @@ surface projection.
     )
 
     outputnode = pe.JoinNode(
-        niu.IdentityInterface(fields=["surfaces", "target"]),
+        niu.IdentityInterface(fields=["surfaces", "target", "goodvoxels_ribbon"]),
         joinsource="itersource",
         name="outputnode",
         run_without_submitting=True,
@@ -202,6 +203,9 @@ surface projection.
             (inputnode, goodvoxels_bold_mask_wf, [("source_file", "inputnode.bold_file"),
                                                   ("anat_ribbon", "inputnode.anat_ribbon")]),
             (goodvoxels_bold_mask_wf, rename_src, [("outputnode.masked_bold", "in_file")]),
+            (goodvoxels_bold_mask_wf, outputnode, [("outputnode.goodvoxels_ribbon",
+                                                    "goodvoxels_ribbon")]),
+
         ])
         # fmt: on
     else:
