@@ -136,6 +136,7 @@ def init_func_derivatives_wf(
     bids_root,
     cifti_output,
     freesurfer,
+    project_goodvoxels,
     all_metadata,
     multiecho,
     output_dir,
@@ -218,6 +219,7 @@ def init_func_derivatives_wf(
                 'cifti_density',
                 'confounds',
                 'confounds_metadata',
+                'goodvoxels_ribbon',
                 'melodic_mix',
                 'nonaggr_denoised_file',
                 'source_file',
@@ -781,6 +783,29 @@ def init_func_derivatives_wf(
             (name_surfs, ds_bold_surfs, [('hemi', 'hemi')]),
         ])
         # fmt:on
+
+        if project_goodvoxels:
+            ds_goodvoxels_ribbon = pe.Node(
+                DerivativesDataSink(
+                    base_directory=output_dir,
+                    space='T1w',
+                    desc='goodvoxels',
+                    suffix='mask',
+                    compress=True,
+                    dismiss_entities=("echo",),
+                ),
+                name='ds_goodvoxels_ribbon',
+                run_without_submitting=True,
+                mem_gb=DEFAULT_MEMORY_MIN_GB,
+            )
+            # fmt:off
+            workflow.connect([
+                (inputnode, ds_goodvoxels_ribbon, [
+                    ('source_file', 'source_file'),
+                    ('goodvoxels_ribbon', 'in_file'),
+                    ('surf_refs', 'keys')]),
+            ])
+            # fmt:on
 
     # CIFTI output
     if cifti_output:
