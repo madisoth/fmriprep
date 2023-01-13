@@ -784,28 +784,28 @@ def init_func_derivatives_wf(
         ])
         # fmt:on
 
-        if project_goodvoxels:
-            ds_goodvoxels_ribbon = pe.Node(
-                DerivativesDataSink(
-                    base_directory=output_dir,
-                    space='T1w',
-                    desc='goodvoxels',
-                    suffix='mask',
-                    compress=True,
-                    dismiss_entities=("echo",),
-                ),
-                name='ds_goodvoxels_ribbon',
-                run_without_submitting=True,
-                mem_gb=DEFAULT_MEMORY_MIN_GB,
-            )
-            # fmt:off
-            workflow.connect([
-                (inputnode, ds_goodvoxels_ribbon, [
-                    ('source_file', 'source_file'),
-                    ('goodvoxels_ribbon', 'in_file'),
-                    ('surf_refs', 'keys')]),
-            ])
-            # fmt:on
+    if freesurfer and project_goodvoxels:
+        ds_goodvoxels_ribbon = pe.Node(
+            DerivativesDataSink(
+                base_directory=output_dir,
+                space='T1w',
+                desc='goodvoxels',
+                suffix='mask',
+                compress=True,
+                dismiss_entities=("echo",),
+            ),
+            name='ds_goodvoxels_ribbon',
+            run_without_submitting=True,
+            mem_gb=DEFAULT_MEMORY_MIN_GB,
+        )
+        # fmt:off
+        workflow.connect([
+            (inputnode, ds_goodvoxels_ribbon, [
+                ('source_file', 'source_file'),
+                ('goodvoxels_ribbon', 'in_file'),
+                ('surf_refs', 'keys')]),
+        ])
+        # fmt:on
 
     # CIFTI output
     if cifti_output:
