@@ -162,6 +162,10 @@ def init_func_derivatives_wf(
         Whether the ``--cifti-output`` flag was set.
     freesurfer : :obj:`bool`
         Whether FreeSurfer anatomical processing was run.
+    project_goodvoxels : :obj:`bool`
+        Whether the option was used to exclude voxels with
+        locally high coefficient of variation, or that lie outside the
+        cortical surfaces, from the surface projection.
     metadata : :obj:`dict`
         Metadata dictionary associated to the BOLD run.
     multiecho : :obj:`bool`
