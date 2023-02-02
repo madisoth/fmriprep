@@ -29,6 +29,7 @@ Resampling workflows
 .. autofunction:: init_bold_preproc_trans_wf
 
 """
+import templateflow.api as tf
 import nipype.interfaces.workbench as wb
 from nipype import Function
 from nipype.interfaces import freesurfer as fs
@@ -37,6 +38,7 @@ from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 from niworkflows.interfaces.fixes import FixHeaderApplyTransforms as ApplyTransforms
 from niworkflows.interfaces.freesurfer import MedialNaNs
+from ...interfaces.metric import MetricDilate
 
 from ...config import DEFAULT_MEMORY_MIN_GB
 
@@ -175,7 +177,30 @@ surface projection.
         name="sampler",
         mem_gb=mem_gb * 3,
     )
+
     sampler.inputs.hemi = ["lh", "rh"]
+
+    metric_dilate = pe.MapNode(
+        MetricDilate(
+            distance=10,
+            nearest=True,
+        ),
+        iterfield=["in_file", "surf_file"],
+        name="metric_dilate",
+        mem_gb=mem_gb * 3,
+    )
+    metric_dilate.inputs.surf_file = [
+        str(
+            tf.get(
+                "fsaverage",
+                hemi=hemi,
+                density="164k",
+                suffix="midthickness",
+                extension=".surf.gii",
+            )
+        )
+        for hemi in "LR"
+    ]
 
     # Refine if medial vertices should be NaNs
     medial_nans = pe.MapNode(
@@ -201,7 +226,7 @@ surface projection.
     )
 
     outputnode = pe.JoinNode(
-        niu.IdentityInterface(fields=["surfaces", "target"]),
+        niu.IdentityInterface(fields=["surfaces", "target", "goodvoxels_ribbon"]),
         joinsource="itersource",
         name="outputnode",
         run_without_submitting=True,
@@ -215,6 +240,9 @@ surface projection.
             (inputnode, goodvoxels_bold_mask_wf, [("source_file", "inputnode.bold_file"),
                                                   ("anat_ribbon", "inputnode.anat_ribbon")]),
             (goodvoxels_bold_mask_wf, rename_src, [("outputnode.masked_bold", "in_file")]),
+            (goodvoxels_bold_mask_wf, outputnode, [("outputnode.goodvoxels_ribbon",
+                                                    "goodvoxels_ribbon")]),
+
         ])
         # fmt: on
     else:
@@ -251,13 +279,17 @@ surface projection.
         # fmt: off
         workflow.connect([
             (inputnode, medial_nans, [("subjects_dir", "subjects_dir")]),
-            (sampler, medial_nans, [("out_file", "in_file")]),
+            (sampler, metric_dilate, [("out_file", "in_file")]),
+            (metric_dilate, medial_nans, [("out_file", "in_file")]),
             (medial_nans, update_metadata, [("out_file", "in_file")]),
         ])
         # fmt: on
     else:
         # fmt: off
-        workflow.connect(sampler, "out_file", update_metadata, "in_file")
+        workflow.connect([
+            (sampler, metric_dilate, [("out_file", "in_file")]),
+            (metric_dilate, update_metadata, [("out_file", "in_file")]),
+        ])   
         # fmt: on
 
     return workflow

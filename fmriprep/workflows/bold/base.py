@@ -437,6 +437,7 @@ Non-gridded (surface) resamplings were performed using `mri_vol2surf`
         bids_root=layout.root,
         cifti_output=config.workflow.cifti_output,
         freesurfer=freesurfer,
+        project_goodvoxels=config.workflow.project_goodvoxels,
         all_metadata=all_metadata,
         multiecho=multiecho,
         output_dir=fmriprep_dir,
@@ -958,6 +959,9 @@ Non-gridded (surface) resamplings were performed using `mri_vol2surf`
             (bold_t1_trans_wf, bold_surf_wf, [("outputnode.bold_t1", "inputnode.source_file")]),
             (bold_surf_wf, outputnode, [("outputnode.surfaces", "surfaces")]),
             (bold_surf_wf, func_derivatives_wf, [("outputnode.target", "inputnode.surf_refs")]),
+            (bold_surf_wf, func_derivatives_wf, [("outputnode.goodvoxels_ribbon",
+                                                  "inputnode.goodvoxels_ribbon")]),
+
         ])
         # fmt:on
 

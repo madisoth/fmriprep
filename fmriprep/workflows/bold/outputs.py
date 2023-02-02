@@ -136,6 +136,7 @@ def init_func_derivatives_wf(
     bids_root,
     cifti_output,
     freesurfer,
+    project_goodvoxels,
     all_metadata,
     multiecho,
     output_dir,
@@ -154,6 +155,10 @@ def init_func_derivatives_wf(
         Whether the ``--cifti-output`` flag was set.
     freesurfer : :obj:`bool`
         Whether FreeSurfer anatomical processing was run.
+    project_goodvoxels : :obj:`bool`
+        Whether the option was used to exclude voxels with
+        locally high coefficient of variation, or that lie outside the
+        cortical surfaces, from the surface projection.
     metadata : :obj:`dict`
         Metadata dictionary associated to the BOLD run.
     multiecho : :obj:`bool`
@@ -218,6 +223,7 @@ def init_func_derivatives_wf(
                 'cifti_density',
                 'confounds',
                 'confounds_metadata',
+                'goodvoxels_ribbon',
                 'melodic_mix',
                 'nonaggr_denoised_file',
                 'source_file',
@@ -779,6 +785,29 @@ def init_func_derivatives_wf(
             (select_fs_surf, ds_bold_surfs, [('surfaces', 'in_file'),
                                              ('key', 'space')]),
             (name_surfs, ds_bold_surfs, [('hemi', 'hemi')]),
+        ])
+        # fmt:on
+
+    if freesurfer and project_goodvoxels:
+        ds_goodvoxels_ribbon = pe.Node(
+            DerivativesDataSink(
+                base_directory=output_dir,
+                space='T1w',
+                desc='goodvoxels',
+                suffix='mask',
+                compress=True,
+                dismiss_entities=("echo",),
+            ),
+            name='ds_goodvoxels_ribbon',
+            run_without_submitting=True,
+            mem_gb=DEFAULT_MEMORY_MIN_GB,
+        )
+        # fmt:off
+        workflow.connect([
+            (inputnode, ds_goodvoxels_ribbon, [
+                ('source_file', 'source_file'),
+                ('goodvoxels_ribbon', 'in_file'),
+                ('surf_refs', 'keys')]),
         ])
         # fmt:on
 
